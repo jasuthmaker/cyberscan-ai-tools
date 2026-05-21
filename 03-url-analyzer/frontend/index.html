@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Security Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0B0F1A; color: #E6EAF2; font-family: 'Segoe UI', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
+    .glow  { box-shadow: 0 0 24px rgba(79,140,255,0.3); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    @keyframes bar { from { width:0; } to { width:var(--w); } }
+    .bar { animation: bar 0.8s cubic-bezier(0.4,0,0.2,1) both; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4 py-12">
+
+  <div class="w-full max-w-lg">
+    <div class="text-center mb-10 fade-up">
+      <div class="text-4xl mb-3">🔗</div>
+      <h1 class="text-3xl font-bold text-white mb-2">URL Security Analyzer</h1>
+      <p class="text-gray-400">Detect suspicious patterns and risk factors in any URL.</p>
+    </div>
+
+    <div class="glass rounded-2xl p-6 mb-6 fade-up" style="animation-delay:0.1s">
+      <label class="block text-sm text-gray-400 mb-2 font-medium">URL to Analyze</label>
+      <input id="url-input" type="url" placeholder="https://example.com/path"
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" />
+      <button onclick="analyze()"
+        class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition glow">
+        Analyze URL
+      </button>
+    </div>
+
+    <div id="results" class="hidden fade-up space-y-4" style="animation-delay:0.2s">
+      <!-- Risk score -->
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm text-gray-400 font-medium">Risk Score</span>
+          <span id="risk-level" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+        </div>
+        <div class="flex items-end gap-3 mb-3">
+          <span id="risk-score" class="text-5xl font-black text-white"></span>
+          <span class="text-gray-400 text-lg mb-1">/100</span>
+        </div>
+        <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+          <div id="risk-bar" class="bar h-full rounded-full" style="--w:0%"></div>
+        </div>
+      </div>
+
+      <!-- URL breakdown -->
+      <div class="glass rounded-2xl p-6 space-y-3">
+        <div class="text-sm text-gray-400 font-medium mb-1">URL Breakdown</div>
+        <div class="grid grid-cols-2 gap-2 font-mono text-sm">
+          <span class="text-gray-500">Scheme</span><span id="b-scheme" class="text-white"></span>
+          <span class="text-gray-500">Domain</span><span id="b-domain" class="text-white break-all"></span>
+          <span class="text-gray-500">Path</span>  <span id="b-path"   class="text-white break-all"></span>
+          <span class="text-gray-500">Subdomains</span><span id="b-subs" class="text-white"></span>
+        </div>
+      </div>
+
+      <!-- Flags -->
+      <div class="glass rounded-2xl p-6">
+        <div class="text-sm text-gray-400 font-medium mb-3">Security Flags</div>
+        <div id="flags" class="space-y-2"></div>
+      </div>
+
+      <!-- Risks list -->
+      <div id="risks-box" class="hidden glass rounded-2xl p-6">
+        <div class="text-sm text-gray-400 font-medium mb-3">Detected Risks</div>
+        <ul id="risks-list" class="space-y-2"></ul>
+      </div>
+    </div>
+
+    <div id="error-box" class="hidden glass rounded-2xl p-4 text-red-400 text-sm text-center mt-4"></div>
+  </div>
+
+  <script>
+    const API = '';
+
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') analyze();
+    });
+
+    const levelCfg = {
+      Safe:     { color: '#2EE59D', bg: 'rgba(46,229,157,0.1)',   border: 'rgba(46,229,157,0.2)'  },
+      Low:      { color: '#4F8CFF', bg: 'rgba(79,140,255,0.1)',   border: 'rgba(79,140,255,0.2)'  },
+      Medium:   { color: '#FFB020', bg: 'rgba(255,176,32,0.1)',   border: 'rgba(255,176,32,0.2)'  },
+      High:     { color: '#FF4D4D', bg: 'rgba(255,77,77,0.1)',    border: 'rgba(255,77,77,0.2)'   },
+      Critical: { color: '#FF4D4D', bg: 'rgba(255,77,77,0.15)',   border: 'rgba(255,77,77,0.3)'   },
+    };
+
+    function flagRow(label, value, dangerIfTrue) {
+      const active = dangerIfTrue ? value : !value;
+      const col = active ? (dangerIfTrue ? '#FF4D4D' : '#2EE59D') : 'rgba(230,234,242,0.35)';
+      return `<div class="flex items-center justify-between">
+        <span class="text-sm text-gray-400">${label}</span>
+        <span style="color:${col}" class="text-sm font-medium">${value ? 'Yes' : 'No'}</span>
+      </div>`;
+    }
+
+    async function analyze() {
+      const url = document.getElementById('url-input').value.trim();
+      if (!url) return;
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API}/analyze`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ url }),
+        });
+        const d = await res.json();
+        const cfg = levelCfg[d.risk_level] || levelCfg.Safe;
+
+        document.getElementById('results').classList.remove('hidden');
+
+        const levelBadge = document.getElementById('risk-level');
+        levelBadge.textContent       = d.risk_level;
+        levelBadge.style.color       = cfg.color;
+        levelBadge.style.background  = cfg.bg;
+        levelBadge.style.border      = `1px solid ${cfg.border}`;
+
+        const scoreEl = document.getElementById('risk-score');
+        scoreEl.textContent  = d.risk_score;
+        scoreEl.style.color  = cfg.color;
+
+        const bar = document.getElementById('risk-bar');
+        bar.style.setProperty('--w', `${d.risk_score}%`);
+        bar.style.background = cfg.color;
+        bar.style.animation  = 'none'; void bar.offsetHeight; bar.style.animation = '';
+
+        document.getElementById('b-scheme').textContent = d.scheme || '—';
+        document.getElementById('b-domain').textContent = d.domain || '—';
+        document.getElementById('b-path').textContent   = d.path   || '/';
+        document.getElementById('b-subs').textContent   = d.subdomain_count;
+
+        document.getElementById('flags').innerHTML = [
+          flagRow('IP Address Host',    d.has_ip_host,           true),
+          flagRow('Suspicious TLD',     d.has_suspicious_tld,    true),
+          flagRow('Shortened URL',      d.is_shortened,          true),
+        ].join('');
+
+        const risksBox  = document.getElementById('risks-box');
+        const risksList = document.getElementById('risks-list');
+        if (d.risks && d.risks.length > 0) {
+          risksBox.classList.remove('hidden');
+          risksList.innerHTML = d.risks
+            .map(r => `<li class="flex gap-2 text-sm text-red-300"><span>⚠</span>${r}</li>`)
+            .join('');
+        } else {
+          risksBox.classList.add('hidden');
+        }
+      } catch (err) {
+        document.getElementById('error-box').textContent = `Error: ${err.message}`;
+        document.getElementById('error-box').classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

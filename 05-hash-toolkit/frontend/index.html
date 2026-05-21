@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hash & Encoding Toolkit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0B0F1A; color: #E6EAF2; font-family: 'Segoe UI', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
+    .glow  { box-shadow: 0 0 24px rgba(79,140,255,0.3); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    .tab-active { background: rgba(79,140,255,0.15); border-color: rgba(79,140,255,0.3) !important; color: #4F8CFF; }
+    .mono { font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all; }
+    .copy-btn { cursor:pointer; transition:all 0.2s; }
+    .copy-btn:hover { color: #4F8CFF; }
+  </style>
+</head>
+<body class="min-h-screen px-4 py-12">
+
+  <div class="max-w-2xl mx-auto">
+    <div class="text-center mb-10 fade-up">
+      <div class="text-4xl mb-3">⚙️</div>
+      <h1 class="text-3xl font-bold text-white mb-2">Hash & Encoding Toolkit</h1>
+      <p class="text-gray-400">Hash, encode, or decode any text with one click.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-4 fade-up" style="animation-delay:0.05s">
+      <button id="tab-hash"   onclick="setTab('hash')"   class="tab-active flex-1 glass rounded-xl py-2.5 text-sm font-semibold border transition">Hash</button>
+      <button id="tab-encode" onclick="setTab('encode')" class="flex-1 glass rounded-xl py-2.5 text-sm font-semibold border border-white/10 text-gray-400 transition">Encode</button>
+      <button id="tab-decode" onclick="setTab('decode')" class="flex-1 glass rounded-xl py-2.5 text-sm font-semibold border border-white/10 text-gray-400 transition">Decode B64</button>
+    </div>
+
+    <!-- Input -->
+    <div class="glass rounded-2xl p-6 mb-6 fade-up" style="animation-delay:0.1s">
+      <label id="input-label" class="block text-sm text-gray-400 mb-2 font-medium">Text to Hash</label>
+      <textarea id="main-input" rows="4" placeholder="Enter text..."
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm mono"></textarea>
+      <button onclick="run()"
+        class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition glow">
+        Run
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden fade-up space-y-2" style="animation-delay:0.2s"></div>
+
+    <div id="error-box" class="hidden glass rounded-2xl p-4 text-red-400 text-sm text-center mt-4"></div>
+  </div>
+
+  <script>
+    const API = '';
+    let activeTab = 'hash';
+
+    function setTab(tab) {
+      activeTab = tab;
+      ['hash','encode','decode'].forEach(t => {
+        document.getElementById(`tab-${t}`).className =
+          `${t === tab ? 'tab-active' : 'text-gray-400 border-white/10'} flex-1 glass rounded-xl py-2.5 text-sm font-semibold border transition`;
+      });
+      const labels = { hash:'Text to Hash', encode:'Text to Encode', decode:'Base64 to Decode' };
+      document.getElementById('input-label').textContent = labels[tab];
+      document.getElementById('main-input').value = '';
+      document.getElementById('results').classList.add('hidden');
+      document.getElementById('results').innerHTML = '';
+    }
+
+    function resultRow(label, value) {
+      const id = `val-${label.replace(/\s/g,'-')}`;
+      return `
+        <div class="glass rounded-xl px-4 py-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400 uppercase tracking-wider font-medium">${label}</span>
+            <button class="copy-btn text-xs text-gray-500" onclick="copy('${id}')">Copy</button>
+          </div>
+          <div id="${id}" class="mono text-green-300">${value}</div>
+        </div>`;
+    }
+
+    function copy(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector(`[onclick="copy('${id}')"]`);
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    }
+
+    async function run() {
+      const input = document.getElementById('main-input').value;
+      if (!input.trim()) return;
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        let endpoint, body;
+        if (activeTab === 'hash')   { endpoint = '/hash';   body = { text: input }; }
+        if (activeTab === 'encode') { endpoint = '/encode'; body = { text: input }; }
+        if (activeTab === 'decode') { endpoint = '/decode'; body = { encoded: input }; }
+
+        const res = await fetch(`${API}${endpoint}`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const d = await res.json();
+
+        const resultsEl = document.getElementById('results');
+        resultsEl.classList.remove('hidden');
+
+        if (activeTab === 'hash') {
+          resultsEl.innerHTML = [
+            resultRow('MD5',     d.md5),
+            resultRow('SHA-1',   d.sha1),
+            resultRow('SHA-256', d.sha256),
+            resultRow('SHA-512', d.sha512),
+            resultRow('Blake2b', d.blake2b),
+            `<div class="glass rounded-xl px-4 py-3 text-center">
+              <span class="text-xs text-gray-400 uppercase tracking-wider">Shannon Entropy</span>
+              <div class="text-2xl font-black text-blue-400 mt-1">${d.entropy} <span class="text-sm font-normal text-gray-400">bits/char</span></div>
+            </div>`,
+          ].join('');
+        } else if (activeTab === 'encode') {
+          resultsEl.innerHTML = [
+            resultRow('Base64',      d.base64),
+            resultRow('Hex',         d.hex),
+            resultRow('URL Encoded', d.url_encoded),
+            resultRow('HTML Encoded',d.html_encoded),
+          ].join('');
+        } else {
+          if (d.success) {
+            resultsEl.innerHTML = resultRow('Decoded', d.decoded);
+          } else {
+            resultsEl.innerHTML = `<div class="glass rounded-xl p-4 text-red-400 text-sm">${d.error}</div>`;
+          }
+        }
+      } catch (err) {
+        document.getElementById('error-box').textContent = `Error: ${err.message}`;
+        document.getElementById('error-box').classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

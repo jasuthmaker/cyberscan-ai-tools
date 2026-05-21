@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Strength Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0B0F1A; color: #E6EAF2; font-family: 'Segoe UI', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
+    .glow  { box-shadow: 0 0 24px rgba(79,140,255,0.3); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.5s ease both; }
+    @keyframes bar { from { width:0; } to { width:var(--w); } }
+    .bar { animation: bar 0.8s cubic-bezier(0.4,0,0.2,1) both; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4 py-12">
+
+  <div class="w-full max-w-lg">
+    <!-- Header -->
+    <div class="text-center mb-10 fade-up">
+      <div class="text-4xl mb-3">🔐</div>
+      <h1 class="text-3xl font-bold text-white mb-2">Password Analyzer</h1>
+      <p class="text-gray-400">Check the strength of any password instantly.</p>
+    </div>
+
+    <!-- Input -->
+    <div class="glass rounded-2xl p-6 mb-6 fade-up" style="animation-delay:0.1s">
+      <label class="block text-sm text-gray-400 mb-2 font-medium">Enter Password</label>
+      <div class="flex gap-3">
+        <input
+          id="pwd-input"
+          type="password"
+          placeholder="Type your password..."
+          class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+        />
+        <button id="toggle-btn" onclick="toggleVisibility()"
+          class="bg-white/5 border border-white/10 rounded-xl px-4 text-gray-400 hover:text-white transition">👁</button>
+      </div>
+      <button onclick="analyze()"
+        class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition glow">
+        Analyze
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="hidden glass rounded-2xl p-6 fade-up" style="animation-delay:0.2s">
+      <!-- Strength bar -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-sm text-gray-400 font-medium">Strength</span>
+          <span id="strength-label" class="text-sm font-bold"></span>
+        </div>
+        <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+          <div id="strength-bar" class="bar h-full rounded-full" style="--w:0%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span>Weak</span><span>Fair</span><span>Strong</span><span>Very Strong</span>
+        </div>
+      </div>
+
+      <!-- Score -->
+      <div class="text-center mb-6">
+        <div id="score-num" class="text-5xl font-black text-white mb-1"></div>
+        <div class="text-sm text-gray-400">out of 100</div>
+      </div>
+
+      <!-- Checks grid -->
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div id="chk-upper"  class="rounded-xl p-3 text-sm font-medium text-center">Uppercase</div>
+        <div id="chk-lower"  class="rounded-xl p-3 text-sm font-medium text-center">Lowercase</div>
+        <div id="chk-digits" class="rounded-xl p-3 text-sm font-medium text-center">Numbers</div>
+        <div id="chk-sym"    class="rounded-xl p-3 text-sm font-medium text-center">Symbols</div>
+      </div>
+
+      <!-- Feedback -->
+      <div id="feedback" class="hidden">
+        <div class="text-sm text-gray-400 font-medium mb-2">Suggestions</div>
+        <ul id="feedback-list" class="space-y-1"></ul>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-box" class="hidden glass rounded-2xl p-4 text-red-400 text-sm text-center mt-4"></div>
+  </div>
+
+  <script>
+    const API = '';
+
+    function toggleVisibility() {
+      const inp = document.getElementById('pwd-input');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    document.getElementById('pwd-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') analyze();
+    });
+
+    const strengthColors = {
+      'Weak':        { bar: '#FF4D4D', text: 'text-red-400',    width: '20%' },
+      'Fair':        { bar: '#FFB020', text: 'text-yellow-400', width: '45%' },
+      'Strong':      { bar: '#4F8CFF', text: 'text-blue-400',   width: '70%' },
+      'Very Strong': { bar: '#2EE59D', text: 'text-green-400',  width: '100%' },
+    };
+
+    function check(id, ok) {
+      const el = document.getElementById(id);
+      el.style.background = ok ? 'rgba(46,229,157,0.1)' : 'rgba(255,77,77,0.1)';
+      el.style.color      = ok ? '#2EE59D'              : '#FF4D4D';
+      el.style.border     = `1px solid ${ok ? 'rgba(46,229,157,0.2)' : 'rgba(255,77,77,0.2)'}`;
+      el.innerHTML = (ok ? '✓ ' : '✗ ') + el.innerHTML.replace(/^[✓✗] /, '');
+    }
+
+    async function analyze() {
+      const pwd = document.getElementById('pwd-input').value;
+      if (!pwd) return;
+
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        const res  = await fetch(`${API}/analyze`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ password: pwd }),
+        });
+        const data = await res.json();
+
+        const cfg = strengthColors[data.strength] || strengthColors['Weak'];
+
+        // Show results
+        document.getElementById('results').classList.remove('hidden');
+        document.getElementById('score-num').textContent     = data.score;
+        document.getElementById('score-num').style.color     = cfg.bar;
+        document.getElementById('strength-label').textContent = data.strength;
+        document.getElementById('strength-label').className  = `text-sm font-bold ${cfg.text}`;
+
+        const bar = document.getElementById('strength-bar');
+        bar.style.setProperty('--w', cfg.width);
+        bar.style.background = cfg.bar;
+        bar.style.animation  = 'none';
+        void bar.offsetHeight;
+        bar.style.animation  = '';
+
+        check('chk-upper',  data.has_upper);
+        check('chk-lower',  data.has_lower);
+        check('chk-digits', data.has_digits);
+        check('chk-sym',    data.has_symbols);
+
+        const fbBox  = document.getElementById('feedback');
+        const fbList = document.getElementById('feedback-list');
+        if (data.feedback && data.feedback.length > 0) {
+          fbBox.classList.remove('hidden');
+          fbList.innerHTML = data.feedback
+            .map(f => `<li class="text-sm text-yellow-300 flex gap-2"><span>⚡</span>${f}</li>`)
+            .join('');
+        } else {
+          fbBox.classList.add('hidden');
+          fbList.innerHTML = '';
+        }
+      } catch (err) {
+        document.getElementById('error-box').textContent = `Error: ${err.message}`;
+        document.getElementById('error-box').classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

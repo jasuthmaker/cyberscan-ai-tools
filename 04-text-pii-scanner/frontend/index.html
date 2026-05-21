@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text & PII Scanner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0B0F1A; color: #E6EAF2; font-family: 'Segoe UI', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
+    .glow  { box-shadow: 0 0 24px rgba(79,140,255,0.3); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.5s ease both; }
+  </style>
+</head>
+<body class="min-h-screen px-4 py-12">
+
+  <div class="max-w-2xl mx-auto">
+    <div class="text-center mb-10 fade-up">
+      <div class="text-4xl mb-3">🕵️</div>
+      <h1 class="text-3xl font-bold text-white mb-2">Text & PII Scanner</h1>
+      <p class="text-gray-400">Detect emails, phone numbers, SSNs, and sensitive keywords in any text.</p>
+    </div>
+
+    <div class="glass rounded-2xl p-6 mb-6 fade-up" style="animation-delay:0.1s">
+      <label class="block text-sm text-gray-400 mb-2 font-medium">Paste Text to Scan</label>
+      <textarea id="text-input" rows="6" placeholder="Paste any text here — logs, emails, documents..."
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"></textarea>
+      <button onclick="scan()"
+        class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition glow">
+        Scan for PII
+      </button>
+    </div>
+
+    <div id="results" class="hidden fade-up space-y-4" style="animation-delay:0.2s">
+      <!-- Risk level + stats -->
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm text-gray-400 font-medium">Risk Level</span>
+          <span id="risk-badge" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="text-center">
+            <div id="stat-words" class="text-3xl font-black text-white"></div>
+            <div class="text-xs text-gray-400 mt-1">Words</div>
+          </div>
+          <div class="text-center">
+            <div id="stat-chars" class="text-3xl font-black text-white"></div>
+            <div class="text-xs text-gray-400 mt-1">Characters</div>
+          </div>
+          <div class="text-center">
+            <div id="stat-pii" class="text-3xl font-black"></div>
+            <div class="text-xs text-gray-400 mt-1">PII Found</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="glass rounded-2xl p-4">
+        <p id="summary" class="text-sm text-gray-300"></p>
+      </div>
+
+      <!-- PII details -->
+      <div id="pii-box" class="hidden glass rounded-2xl p-6">
+        <div class="text-sm text-gray-400 font-medium mb-3">PII Detected</div>
+        <div id="pii-list" class="space-y-2"></div>
+      </div>
+
+      <!-- Sensitive keywords -->
+      <div id="kw-box" class="hidden glass rounded-2xl p-6">
+        <div class="text-sm text-gray-400 font-medium mb-3">Sensitive Keywords</div>
+        <div id="kw-list" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <div id="error-box" class="hidden glass rounded-2xl p-4 text-red-400 text-sm text-center mt-4"></div>
+  </div>
+
+  <script>
+    const API = '';
+
+    const riskCfg = {
+      Clean:  { color: '#2EE59D', bg: 'rgba(46,229,157,0.1)',  border: 'rgba(46,229,157,0.2)'  },
+      Low:    { color: '#4F8CFF', bg: 'rgba(79,140,255,0.1)',  border: 'rgba(79,140,255,0.2)'  },
+      Medium: { color: '#FFB020', bg: 'rgba(255,176,32,0.1)',  border: 'rgba(255,176,32,0.2)'  },
+      High:   { color: '#FF4D4D', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.2)'   },
+    };
+
+    const piiIcons = { email:'📧', phone_us:'📱', ssn:'🪪', credit_card:'💳', ip_address:'🌐' };
+
+    async function scan() {
+      const text = document.getElementById('text-input').value;
+      if (!text.trim()) return;
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API}/scan`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ text }),
+        });
+        const d = await res.json();
+        const cfg = riskCfg[d.risk_level] || riskCfg.Clean;
+
+        document.getElementById('results').classList.remove('hidden');
+
+        const badge = document.getElementById('risk-badge');
+        badge.textContent      = d.risk_level;
+        badge.style.color      = cfg.color;
+        badge.style.background = cfg.bg;
+        badge.style.border     = `1px solid ${cfg.border}`;
+
+        document.getElementById('stat-words').textContent = d.word_count;
+        document.getElementById('stat-chars').textContent = d.char_count;
+
+        const piiCount = document.getElementById('stat-pii');
+        piiCount.textContent = d.pii_found.length;
+        piiCount.style.color = d.pii_found.length > 0 ? '#FF4D4D' : '#2EE59D';
+
+        document.getElementById('summary').textContent = d.summary;
+
+        const piiBox = document.getElementById('pii-box');
+        if (d.pii_found.length > 0) {
+          piiBox.classList.remove('hidden');
+          document.getElementById('pii-list').innerHTML = d.pii_found.map(p =>
+            `<div class="flex items-center gap-3 bg-red-500/5 border border-red-500/15 rounded-xl px-4 py-3">
+              <span>${piiIcons[p.type] || '🔍'}</span>
+              <div>
+                <div class="text-xs text-gray-400 uppercase tracking-wider">${p.type.replace('_',' ')}</div>
+                <div class="font-mono text-sm text-white">${p.value}</div>
+              </div>
+              <span class="ml-auto text-xs text-gray-500">pos ${p.position}</span>
+            </div>`
+          ).join('');
+        } else {
+          piiBox.classList.add('hidden');
+        }
+
+        const kwBox = document.getElementById('kw-box');
+        if (d.sensitive_keywords_found.length > 0) {
+          kwBox.classList.remove('hidden');
+          document.getElementById('kw-list').innerHTML = d.sensitive_keywords_found.map(k =>
+            `<span class="bg-orange-500/10 border border-orange-500/20 text-orange-300 font-mono text-sm px-3 py-1 rounded-full">⚠ ${k}</span>`
+          ).join('');
+        } else {
+          kwBox.classList.add('hidden');
+        }
+      } catch (err) {
+        document.getElementById('error-box').textContent = `Error: ${err.message}`;
+        document.getElementById('error-box').classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
