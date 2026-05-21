@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberScan AI — Security Suite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:      #0B0F1A;
+      --card:    rgba(255,255,255,0.04);
+      --border:  rgba(255,255,255,0.08);
+      --primary: #4F8CFF;
+      --accent:  #7C5CFF;
+      --success: #2EE59D;
+      --warn:    #FFB020;
+      --danger:  #FF4D4D;
+      --text:    #E6EAF2;
+      --muted:   rgba(230,234,242,0.45);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: rgba(255,255,255,0.02);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .logo-text { font-family: 'Sora'; font-weight: 800; font-size: 15px; color: var(--text); line-height: 1.2; }
+    .logo-sub  { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 20px;
+      margin: 2px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover  { background: rgba(255,255,255,0.04); color: var(--text); }
+    .nav-item.active {
+      background: rgba(79,140,255,0.12);
+      border-color: rgba(79,140,255,0.2);
+      color: var(--primary);
+    }
+    .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── MAIN ── */
+    #main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 48px;
+      height: 100vh;
+    }
+
+    /* ── PANELS ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.35s ease both; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-header { margin-bottom: 32px; }
+    .panel-title  { font-family: 'Sora'; font-weight: 800; font-size: 28px; color: var(--text); margin-bottom: 6px; }
+    .panel-desc   { font-size: 15px; color: var(--muted); }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+    /* ── INPUTS ── */
+    input, textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: rgba(79,140,255,0.4); }
+    input::placeholder, textarea::placeholder { color: rgba(230,234,242,0.25); }
+    textarea { resize: vertical; font-family: 'Inter', sans-serif; }
+
+    .mono-input { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+    /* ── BUTTON ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-family: 'Inter'; font-weight: 700; font-size: 14px;
+      cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      box-shadow: 0 0 20px rgba(79,140,255,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(79,140,255,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+    .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+    .btn-full { width: 100%; margin-top: 14px; }
+
+    /* ── RESULTS ── */
+    .result-hidden { display: none; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono';
+    }
+
+    .score-big {
+      font-family: 'Sora'; font-weight: 800; font-size: 56px; line-height: 1;
+    }
+
+    /* Strength bar */
+    .bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+    .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Check grid */
+    .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .check-item {
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 13px; font-weight: 600;
+      text-align: center; border: 1px solid;
+    }
+
+    /* KV rows */
+    .kv { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .kv:last-child { border-bottom: none; }
+    .kv-label { font-size: 13px; color: var(--muted); }
+    .kv-value { font-family: 'JetBrains Mono'; font-size: 13px; font-weight: 500; }
+
+    /* Mono result rows */
+    .mono-row {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+    .mono-row-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .mono-row-value {
+      font-family: 'JetBrains Mono'; font-size: 12px; color: #2EE59D;
+      word-break: break-all; line-height: 1.5;
+    }
+    .mono-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+
+    /* PII item */
+    .pii-item {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,77,77,0.05);
+      border: 1px solid rgba(255,77,77,0.12);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    }
+    .pii-type  { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--danger); }
+    .pii-value { font-family: 'JetBrains Mono'; font-size: 13px; color: var(--text); }
+
+    /* Risk flags */
+    .flag-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .flag-row:last-child { border-bottom: none; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 11px; padding: 4px; }
+    .tab {
+      flex: 1; padding: 9px; border-radius: 8px; text-align: center;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      color: var(--muted); border: 1px solid transparent;
+    }
+    .tab.active { background: rgba(79,140,255,0.12); border-color: rgba(79,140,255,0.2); color: var(--primary); }
+
+    /* Feedback list */
+    .feedback-item { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0; font-size: 13px; color: #FFB020; }
+
+    /* Keyword chips */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,176,32,0.08); border: 1px solid rgba(255,176,32,0.18);
+      color: #FFB020; border-radius: 20px; padding: 4px 12px;
+      font-family: 'JetBrains Mono'; font-size: 12px; margin: 3px;
+    }
+
+    /* Error */
+    .error-box { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2); border-radius: 10px; padding: 12px 16px; color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+
+    /* Loading spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      #sidebar { width: 64px; min-width: 64px; }
+      .nav-label, .logo-text, .logo-sub, .sidebar-footer { display: none; }
+      .logo { justify-content: center; padding: 0 0 20px; }
+      .nav-item { justify-content: center; padding: 11px; margin: 2px 6px; }
+      #main { padding: 24px 20px; }
+      .panel-title { font-size: 22px; }
+      .check-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────────── -->
+<nav id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🛡</div>
+    <div>
+      <div class="logo-text">CyberScan</div>
+      <div class="logo-sub">AI SUITE</div>
+    </div>
+  </div>
+
+  <div class="nav-item active" onclick="showTool('password')" id="nav-password">
+    <span class="nav-icon">🔐</span>
+    <span class="nav-label">Password</span>
+  </div>
+  <div class="nav-item" onclick="showTool('ip')" id="nav-ip">
+    <span class="nav-icon">🌐</span>
+    <span class="nav-label">IP Lookup</span>
+  </div>
+  <div class="nav-item" onclick="showTool('url')" id="nav-url">
+    <span class="nav-icon">🔗</span>
+    <span class="nav-label">URL Analyzer</span>
+  </div>
+  <div class="nav-item" onclick="showTool('text')" id="nav-text">
+    <span class="nav-icon">🕵️</span>
+    <span class="nav-label">PII Scanner</span>
+  </div>
+  <div class="nav-item" onclick="showTool('hash')" id="nav-hash">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Hash Tools</span>
+  </div>
+
+  <div class="sidebar-footer">
+    CyberScan AI Suite<br />All tools in one place.
+  </div>
+</nav>
+
+<!-- ── MAIN ────────────────────────────────────────────────────────────── -->
+<main id="main">
+
+  <!-- ── TOOL 1: PASSWORD ──────────────────────────────────────────────── -->
+  <div class="panel active" id="panel-password">
+    <div class="panel-header">
+      <div class="panel-title">🔐 Password Analyzer</div>
+      <div class="panel-desc">Check password strength, character composition, and get improvement tips.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Password Input</div>
+      <div style="display:flex;gap:10px;">
+        <input id="pwd-input" type="password" class="mono-input" placeholder="Enter any password..." />
+        <button class="btn btn-ghost" style="width:48px;flex-shrink:0;" onclick="togglePwd()">👁</button>
+      </div>
+      <button class="btn btn-primary btn-full" id="pwd-btn" onclick="runPassword()">Analyze Password</button>
+      <div class="error-box" id="pwd-error"></div>
+    </div>
+
+    <div id="pwd-results" class="result-hidden">
+      <!-- Score + strength -->
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <div class="card-title">Strength Score</div>
+            <div id="pwd-score" class="score-big"></div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;">out of 100</div>
+          </div>
+          <div id="pwd-strength-badge" class="badge" style="font-size:14px;padding:6px 18px;margin-top:4px;"></div>
+        </div>
+        <div class="bar-track" style="margin-top:20px;">
+          <div id="pwd-bar" class="bar-fill" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
+          <span>Weak</span><span>Fair</span><span>Strong</span><span>Very Strong</span>
+        </div>
+      </div>
+
+      <!-- Character checks -->
+      <div class="card">
+        <div class="card-title">Character Types</div>
+        <div class="check-grid" id="pwd-checks"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="card" id="pwd-feedback-card" style="display:none;">
+        <div class="card-title">Suggestions</div>
+        <div id="pwd-feedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOOL 2: IP ─────────────────────────────────────────────────────── -->
+  <div class="panel" id="panel-ip">
+    <div class="panel-header">
+      <div class="panel-title">🌐 IP Classifier</div>
+      <div class="panel-desc">Classify any IPv4 or IPv6 address — private, global, loopback, multicast and more.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">IP Address</div>
+      <input id="ip-input" type="text" class="mono-input" placeholder="e.g. 8.8.8.8 or 192.168.1.1" />
+      <button class="btn btn-primary btn-full" id="ip-btn" onclick="runIP()">Classify IP</button>
+      <div class="error-box" id="ip-error"></div>
+    </div>
+
+    <div id="ip-results" class="result-hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <span id="ip-valid-badge" class="badge"></span>
+          <span id="ip-version-badge" class="badge" style="background:rgba(79,140,255,0.1);border:1px solid rgba(79,140,255,0.2);color:var(--primary);"></span>
+        </div>
+        <div id="ip-description" style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:20px;"></div>
+        <div class="card-title">Details</div>
+        <div class="kv"><span class="kv-label">IP Class</span><span id="ip-class" class="kv-value" style="color:#7C5CFF;"></span></div>
+        <div class="check-grid" style="margin-top:14px;" id="ip-flags"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOOL 3: URL ─────────────────────────────────────────────────────── -->
+  <div class="panel" id="panel-url">
+    <div class="panel-header">
+      <div class="panel-title">🔗 URL Analyzer</div>
+      <div class="panel-desc">Detect malicious patterns, suspicious TLDs, IP hosts, and shortened links.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">URL to Analyze</div>
+      <input id="url-input" type="url" class="mono-input" placeholder="https://example.com/path" />
+      <button class="btn btn-primary btn-full" id="url-btn" onclick="runURL()">Analyze URL</button>
+      <div class="error-box" id="url-error"></div>
+    </div>
+
+    <div id="url-results" class="result-hidden">
+      <!-- Risk score -->
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <div class="card-title">Risk Score</div>
+            <div id="url-score" class="score-big"></div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;">out of 100</div>
+          </div>
+          <div id="url-level-badge" class="badge" style="font-size:14px;padding:6px 18px;margin-top:4px;"></div>
+        </div>
+        <div class="bar-track" style="margin-top:20px;">
+          <div id="url-bar" class="bar-fill" style="width:0%;background:var(--danger)"></div>
+        </div>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="card">
+        <div class="card-title">URL Breakdown</div>
+        <div class="kv"><span class="kv-label">Scheme</span>   <span id="url-scheme" class="kv-value"></span></div>
+        <div class="kv"><span class="kv-label">Domain</span>   <span id="url-domain" class="kv-value" style="max-width:60%;text-align:right;word-break:break-all;"></span></div>
+        <div class="kv"><span class="kv-label">Path</span>     <span id="url-path"   class="kv-value" style="max-width:60%;text-align:right;word-break:break-all;"></span></div>
+        <div class="kv"><span class="kv-label">Subdomains</span><span id="url-subs"  class="kv-value"></span></div>
+      </div>
+
+      <!-- Security flags -->
+      <div class="card">
+        <div class="card-title">Security Flags</div>
+        <div id="url-flags"></div>
+      </div>
+
+      <!-- Detected risks -->
+      <div class="card" id="url-risks-card" style="display:none;">
+        <div class="card-title">Detected Risks</div>
+        <div id="url-risks"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOOL 4: TEXT / PII ─────────────────────────────────────────────── -->
+  <div class="panel" id="panel-text">
+    <div class="panel-header">
+      <div class="panel-title">🕵️ PII Scanner</div>
+      <div class="panel-desc">Find emails, phone numbers, SSNs, credit cards, IPs, and sensitive keywords in any text.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Paste Text</div>
+      <textarea id="text-input" rows="6" placeholder="Paste logs, emails, documents, config files..."></textarea>
+      <button class="btn btn-primary btn-full" id="text-btn" onclick="runText()">Scan for PII</button>
+      <div class="error-box" id="text-error"></div>
+    </div>
+
+    <div id="text-results" class="result-hidden">
+      <!-- Stats -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="card-title" style="margin:0;">Scan Summary</div>
+          <span id="text-risk-badge" class="badge"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div id="text-words" style="font-family:'Sora';font-weight:800;font-size:26px;color:var(--text);"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">Words</div>
+          </div>
+          <div style="text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div id="text-chars" style="font-family:'Sora';font-weight:800;font-size:26px;color:var(--text);"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">Chars</div>
+          </div>
+          <div style="text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div id="text-pii-count" style="font-family:'Sora';font-weight:800;font-size:26px;"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">PII Found</div>
+          </div>
+        </div>
+        <div id="text-summary" style="margin-top:14px;font-size:13px;color:var(--muted);padding:10px 14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--border);"></div>
+      </div>
+
+      <!-- PII list -->
+      <div class="card" id="text-pii-card" style="display:none;">
+        <div class="card-title">PII Detected</div>
+        <div id="text-pii-list"></div>
+      </div>
+
+      <!-- Keywords -->
+      <div class="card" id="text-kw-card" style="display:none;">
+        <div class="card-title">Sensitive Keywords</div>
+        <div id="text-kw-list" style="margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOOL 5: HASH ────────────────────────────────────────────────────── -->
+  <div class="panel" id="panel-hash">
+    <div class="panel-header">
+      <div class="panel-title">⚙️ Hash & Encoding</div>
+      <div class="panel-desc">Generate hashes, encode/decode text in Base64, Hex, URL, and HTML formats.</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="hash-tab-hash"   onclick="setHashTab('hash')">Hash</div>
+      <div class="tab"        id="hash-tab-encode" onclick="setHashTab('encode')">Encode</div>
+      <div class="tab"        id="hash-tab-decode" onclick="setHashTab('decode')">Decode B64</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="hash-input-label">Text to Hash</div>
+      <textarea id="hash-input" rows="4" class="mono-input" placeholder="Enter text..."></textarea>
+      <button class="btn btn-primary btn-full" id="hash-btn" onclick="runHash()">Run</button>
+      <div class="error-box" id="hash-error"></div>
+    </div>
+
+    <div id="hash-results" class="result-hidden" style="animation:fadeUp 0.35s ease both;"></div>
+  </div>
+
+</main>
+
+<script>
+  const API = '';
+  let hashTab = 'hash';
+
+  // ── NAV ────────────────────────────────────────────────────────────────────
+  function showTool(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+  }
+
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<div class="spinner"></div> Analyzing...'
+      : btn.dataset.label;
+  }
+
+  function initBtn(id, label) {
+    const btn = document.getElementById(id);
+    btn.dataset.label = label;
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = 'Error: ' + msg;
+    el.style.display = 'block';
+  }
+  function hideError(id) { document.getElementById(id).style.display = 'none'; }
+
+  function colFor(name) {
+    const map = { Safe:'var(--success)', Low:'var(--primary)', Medium:'var(--warn)', High:'var(--danger)', Critical:'var(--danger)',
+                  Weak:'var(--danger)', Fair:'var(--warn)', Strong:'var(--primary)', 'Very Strong':'var(--success)',
+                  Clean:'var(--success)' };
+    return map[name] || 'var(--muted)';
+  }
+
+  function badge(el, text, color) {
+    el.textContent = text;
+    el.style.background = color + '18';
+    el.style.border      = '1px solid ' + color + '35';
+    el.style.color       = color;
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  // ── PASSWORD ───────────────────────────────────────────────────────────────
+  initBtn('pwd-btn', 'Analyze Password');
+
+  function togglePwd() {
+    const inp = document.getElementById('pwd-input');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key === 'Enter') runPassword(); });
+    document.getElementById('ip-input') .addEventListener('keydown', e => { if (e.key === 'Enter') runIP(); });
+    document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') runURL(); });
+  });
+
+  async function runPassword() {
+    const pwd = document.getElementById('pwd-input').value;
+    if (!pwd) return;
+    hideError('pwd-error');
+    setLoading('pwd-btn', true);
+    try {
+      const res = await fetch(API + '/api/password', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pwd})
+      });
+      const d = await res.json();
+      const col = colFor(d.strength);
+
+      // Score
+      document.getElementById('pwd-score').textContent = d.score;
+      document.getElementById('pwd-score').style.color  = col;
+      badge(document.getElementById('pwd-strength-badge'), d.strength, col);
+
+      // Bar
+      const widths = { Weak:'20%', Fair:'45%', Strong:'70%', 'Very Strong':'100%' };
+      const bar = document.getElementById('pwd-bar');
+      bar.style.width = widths[d.strength] || '10%';
+      bar.style.background = col;
+
+      // Checks
+      const checks = [
+        {label:'Uppercase', key:'has_upper'}, {label:'Lowercase',  key:'has_lower'},
+        {label:'Numbers',   key:'has_digits'},{label:'Symbols',    key:'has_symbols'}
+      ];
+      document.getElementById('pwd-checks').innerHTML = checks.map(c => {
+        const ok  = d[c.key];
+        const col = ok ? 'var(--success)' : 'var(--danger)';
+        return `<div class="check-item" style="background:${col}10;border-color:${col}30;color:${col}">
+          ${ok ? '✓' : '✗'} ${c.label}
+        </div>`;
+      }).join('');
+
+      // Feedback
+      const fbCard = document.getElementById('pwd-feedback-card');
+      if (d.feedback && d.feedback.length) {
+        fbCard.style.display = 'block';
+        document.getElementById('pwd-feedback').innerHTML =
+          d.feedback.map(f => `<div class="feedback-item"><span>⚡</span>${f}</div>`).join('');
+      } else { fbCard.style.display = 'none'; }
+
+      document.getElementById('pwd-results').classList.remove('result-hidden');
+    } catch(e) { showError('pwd-error', e.message); }
+    finally { setLoading('pwd-btn', false); }
+  }
+
+  // ── IP ─────────────────────────────────────────────────────────────────────
+  initBtn('ip-btn', 'Classify IP');
+
+  async function runIP() {
+    const ip = document.getElementById('ip-input').value.trim();
+    if (!ip) return;
+    hideError('ip-error');
+    setLoading('ip-btn', true);
+    try {
+      const res = await fetch(API + '/api/ip', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ip})
+      });
+      const d = await res.json();
+
+      const okCol  = d.valid ? 'var(--success)' : 'var(--danger)';
+      badge(document.getElementById('ip-valid-badge'),   d.valid ? '✓ Valid' : '✗ Invalid', okCol);
+      document.getElementById('ip-version-badge').textContent = d.version;
+      document.getElementById('ip-description').textContent   = d.description;
+      document.getElementById('ip-class').textContent =
+        d.ip_class !== 'N/A' ? 'Class ' + d.ip_class : 'N/A';
+
+      const flags = [
+        {label:'Private',   val: d.is_private},
+        {label:'Global',    val: d.is_global},
+        {label:'Loopback',  val: d.is_loopback},
+        {label:'Multicast', val: d.is_multicast},
+      ];
+      document.getElementById('ip-flags').innerHTML = flags.map(f => {
+        const c = f.val ? 'var(--success)' : 'rgba(230,234,242,0.2)';
+        return `<div class="check-item" style="background:${c}12;border-color:${c}35;color:${c}">
+          ${f.val ? '✓' : '○'} ${f.label}
+        </div>`;
+      }).join('');
+
+      document.getElementById('ip-results').classList.remove('result-hidden');
+    } catch(e) { showError('ip-error', e.message); }
+    finally { setLoading('ip-btn', false); }
+  }
+
+  // ── URL ────────────────────────────────────────────────────────────────────
+  initBtn('url-btn', 'Analyze URL');
+
+  const levelColor = { Safe:'var(--success)', Low:'var(--primary)', Medium:'var(--warn)', High:'var(--danger)', Critical:'var(--danger)' };
+
+  async function runURL() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) return;
+    hideError('url-error');
+    setLoading('url-btn', true);
+    try {
+      const res = await fetch(API + '/api/url', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})
+      });
+      const d = await res.json();
+      const col = levelColor[d.risk_level] || 'var(--muted)';
+
+      document.getElementById('url-score').textContent = d.risk_score;
+      document.getElementById('url-score').style.color  = col;
+      badge(document.getElementById('url-level-badge'), d.risk_level, col);
+
+      const bar = document.getElementById('url-bar');
+      bar.style.width = d.risk_score + '%';
+      bar.style.background = col;
+
+      document.getElementById('url-scheme').textContent = d.scheme || '—';
+      document.getElementById('url-domain').textContent = d.domain || '—';
+      document.getElementById('url-path').textContent   = d.path   || '/';
+      document.getElementById('url-subs').textContent   = d.subdomain_count;
+
+      const flagDefs = [
+        {label:'IP Address Host',    val: d.has_ip_host,        bad: true},
+        {label:'Suspicious TLD',     val: d.has_suspicious_tld, bad: true},
+        {label:'Shortened URL',      val: d.is_shortened,       bad: true},
+      ];
+      document.getElementById('url-flags').innerHTML = flagDefs.map(f => {
+        const active = f.bad ? f.val : !f.val;
+        const c = f.val ? (f.bad ? 'var(--danger)' : 'var(--success)') : 'var(--muted)';
+        return `<div class="flag-row"><span class="kv-label">${f.label}</span>
+          <span style="color:${c};font-weight:600;font-size:13px;">${f.val ? 'Yes' : 'No'}</span></div>`;
+      }).join('');
+
+      const risksCard = document.getElementById('url-risks-card');
+      if (d.risks && d.risks.length) {
+        risksCard.style.display = 'block';
+        document.getElementById('url-risks').innerHTML =
+          d.risks.map(r => `<div style="display:flex;gap:8px;padding:7px 0;font-size:13px;color:var(--danger);border-bottom:1px solid var(--border);">
+            <span>⚠</span>${r}</div>`).join('');
+      } else { risksCard.style.display = 'none'; }
+
+      document.getElementById('url-results').classList.remove('result-hidden');
+    } catch(e) { showError('url-error', e.message); }
+    finally { setLoading('url-btn', false); }
+  }
+
+  // ── TEXT / PII ─────────────────────────────────────────────────────────────
+  initBtn('text-btn', 'Scan for PII');
+
+  const piiIcons = { email:'📧', phone_us:'📱', ssn:'🪪', credit_card:'💳', ip_address:'🌐' };
+
+  async function runText() {
+    const text = document.getElementById('text-input').value;
+    if (!text.trim()) return;
+    hideError('text-error');
+    setLoading('text-btn', true);
+    try {
+      const res = await fetch(API + '/api/text', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})
+      });
+      const d = await res.json();
+      const col = colFor(d.risk_level);
+
+      badge(document.getElementById('text-risk-badge'), d.risk_level, col);
+      document.getElementById('text-words').textContent = d.word_count;
+      document.getElementById('text-chars').textContent = d.char_count;
+
+      const piiCount = document.getElementById('text-pii-count');
+      piiCount.textContent = d.pii_found.length;
+      piiCount.style.color  = d.pii_found.length > 0 ? 'var(--danger)' : 'var(--success)';
+
+      document.getElementById('text-summary').textContent = d.summary;
+
+      const piiCard = document.getElementById('text-pii-card');
+      if (d.pii_found.length) {
+        piiCard.style.display = 'block';
+        document.getElementById('text-pii-list').innerHTML = d.pii_found.map(p =>
+          `<div class="pii-item">
+            <span style="font-size:20px;">${piiIcons[p.type] || '🔍'}</span>
+            <div><div class="pii-type">${p.type.replace(/_/g,' ')}</div>
+            <div class="pii-value">${p.value}</div></div>
+            <span style="margin-left:auto;font-size:11px;color:var(--muted);">pos ${p.position}</span>
+          </div>`
+        ).join('');
+      } else { piiCard.style.display = 'none'; }
+
+      const kwCard = document.getElementById('text-kw-card');
+      if (d.sensitive_keywords_found.length) {
+        kwCard.style.display = 'block';
+        document.getElementById('text-kw-list').innerHTML =
+          d.sensitive_keywords_found.map(k => `<span class="chip">⚠ ${k}</span>`).join('');
+      } else { kwCard.style.display = 'none'; }
+
+      document.getElementById('text-results').classList.remove('result-hidden');
+    } catch(e) { showError('text-error', e.message); }
+    finally { setLoading('text-btn', false); }
+  }
+
+  // ── HASH ───────────────────────────────────────────────────────────────────
+  initBtn('hash-btn', 'Run');
+
+  function setHashTab(tab) {
+    hashTab = tab;
+    ['hash','encode','decode'].forEach(t => {
+      document.getElementById('hash-tab-' + t).className = 'tab' + (t === tab ? ' active' : '');
+    });
+    const labels = { hash:'Text to Hash', encode:'Text to Encode', decode:'Base64 to Decode' };
+    document.getElementById('hash-input-label').textContent = labels[tab];
+    document.getElementById('hash-input').value = '';
+    document.getElementById('hash-results').classList.add('result-hidden');
+  }
+
+  function monoRow(label, value) {
+    const id = 'copy-' + label.replace(/\s+/g, '-');
+    return `<div class="mono-row">
+      <div class="mono-row-header">
+        <div class="mono-row-label">${label}</div>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="copyText('${value.replace(/'/g,"\\'")}',this)">Copy</button>
+      </div>
+      <div class="mono-row-value">${value}</div>
+    </div>`;
+  }
+
+  async function runHash() {
+    const input = document.getElementById('hash-input').value;
+    if (!input.trim()) return;
+    hideError('hash-error');
+    setLoading('hash-btn', true);
+    try {
+      let endpoint, body;
+      if (hashTab === 'hash')   { endpoint = '/api/hash';   body = {text: input}; }
+      if (hashTab === 'encode') { endpoint = '/api/encode'; body = {text: input}; }
+      if (hashTab === 'decode') { endpoint = '/api/decode'; body = {encoded: input}; }
+
+      const res = await fetch(API + endpoint, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+      });
+      const d = await res.json();
+
+      const out = document.getElementById('hash-results');
+      out.classList.remove('result-hidden');
+
+      if (hashTab === 'hash') {
+        out.innerHTML = [
+          monoRow('MD5',     d.md5),
+          monoRow('SHA-1',   d.sha1),
+          monoRow('SHA-256', d.sha256),
+          monoRow('SHA-512', d.sha512),
+          monoRow('Blake2b', d.blake2b),
+          `<div class="card" style="text-align:center;">
+            <div class="card-title">Shannon Entropy</div>
+            <div style="font-family:'Sora';font-weight:800;font-size:40px;color:var(--primary);">${d.entropy}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">bits / character</div>
+          </div>`,
+        ].join('');
+      } else if (hashTab === 'encode') {
+        out.innerHTML = [
+          monoRow('Base64',       d.base64),
+          monoRow('Hex',          d.hex),
+          monoRow('URL Encoded',  d.url_encoded),
+          monoRow('HTML Encoded', d.html_encoded),
+        ].join('');
+      } else {
+        out.innerHTML = d.success
+          ? monoRow('Decoded', d.decoded)
+          : `<div class="card" style="color:var(--danger);font-size:13px;">Error: ${d.error}</div>`;
+      }
+    } catch(e) { showError('hash-error', e.message); }
+    finally { setLoading('hash-btn', false); }
+  }
+</script>
+</body>
+</html>
